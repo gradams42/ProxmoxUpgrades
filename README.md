@@ -1,4 +1,4 @@
-# 🚀 **Proxmox VE: Enhanced Tag-Based VM Organization**
+#  **Proxmox VE: Enhanced Tag-Based VM Organization**
 **Version:** 1.0  
 **Author:** Gabriel Adams  
 **Date:** March 2025  
@@ -13,8 +13,8 @@ This helps administrators efficiently manage **large-scale Proxmox environments*
 
 ---
 
-## 🔥 **Key Features**
-### ✅ **Tag-Based Folder Organization**
+##  **Key Features**
+###  **Tag-Based Folder Organization**
 - The **first tag** assigned to a VM/LXC **determines its parent folder**.
 - Additional tags create **subdirectories** under that parent.
 - Has remediations for accidental incorrect ordering (e.g., ensures `Production -> Database` instead of `Database -> Production`).
@@ -36,7 +36,7 @@ This feature addition is most useful for system administrators with many machine
 implementation allows you to specify further how you manage your network. For example, you can have a `Production` folder with subfolders called `Databases`, `Web`, and `OT`. At the same hierarchy as Production, you 
 can have a overarching folder called `Test` that also has `Databases`, `Web`, and `OT`. 
 
-## 🚀 **Advantages**
+##  **Advantages**
 | Feature | Before Update | After Update |
 |---------|--------------|--------------|
 | **VM Organization** | Flat list of VMs | Structured folders based on tags |
@@ -88,7 +88,7 @@ Your **tag-based organization system** will now be **active**.
 
 
 ##  **Future Improvements**
-✅ **Currently there are some bugs when using the Tag view, but this functionality allows for server view to be more manageable so I beleive it is worth it.**  
+ **Currently there are some bugs when using the Tag view, but this functionality allows for server view to be more manageable so I beleive it is worth it.**  
  
 
 ### **Credits**
