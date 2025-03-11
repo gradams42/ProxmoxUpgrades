@@ -16044,41 +16044,44 @@ Ext.define('PVE.tree.ResourceTree', {
 	return child;
     },
 
-   // private
+	// private
 	groupChild: function(node, info, groups, level) {
 		let me = this;
 		let tags = info.tags ? info.tags.split(';') : [];
 
+		// If no tags exist, place the VM directly under its parent node
 		if (!tags.length) {
 			return me.addChildSorted(node, info);
 		}
 
 		let parentNode = node;
-		let uniquePath = 'root';  // Track unique path to prevent duplicates
 
 		for (let tag of tags) {
+			// Look for an existing folder with this tag
 			let tagNode = parentNode.findChild('groupbyid', tag);
 
 			if (!tagNode) {
+				// Create the folder and assign the tag name as the folder name
 				tagNode = me.addChildSorted(parentNode, {
 					type: 'tag-folder',
 					id: `tag/${tag}`,
-					text: tag,  // ✅ Ensure tag name is set as folder name
+					text: tag, // ✅ Ensure tag name is set as folder name
 					iconCls: 'fa fa-folder',
 					leaf: false,
 					groupbyid: tag,
 				});
 			}
 
-			uniquePath += `/${tag}`;
+			// Move to the next level for subfolders
 			parentNode = tagNode;
 		}
 
-	// Ensure VM is not added twice at different paths
+		// Ensure VM is not duplicated inside multiple folders
 		if (!parentNode.findChild('id', info.id)) {
 			return me.addChildSorted(parentNode, info);
 		}
 	},
+
 
 
      saveSortingOptions: function() {
