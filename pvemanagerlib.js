@@ -16054,13 +16054,18 @@ Ext.define('PVE.tree.ResourceTree', {
 		}
 	
 		let parentNode = node;
-		let baseNumber = 10; // Start at 10 for top-level directories
+		let baseNumber = 10; // Start numbering hierarchy from 10
 	
-		// Ensure tags are processed in the order they are assigned
+		// ✅ Force sorting of tags based on their numerical prefix
+		tags = tags.sort((a, b) => {
+			let numA = parseInt(a.match(/^\d+/)?.[0] || 0, 10);
+			let numB = parseInt(b.match(/^\d+/)?.[0] || 0, 10);
+			return numB - numA; // Ensure largest number comes first
+		});
+	
 		tags.forEach((tag, index) => {
-			let numberPrefix = baseNumber - index; // Assign decreasing number
-	
-			let numberedTag = `${numberPrefix}-${tag}`; // Example: "10-vpn"
+			let numberPrefix = baseNumber - index;
+			let numberedTag = `${numberPrefix}-${tag}`;
 	
 			let tagNode = parentNode.findChild('groupbyid', numberedTag);
 	
@@ -16068,7 +16073,7 @@ Ext.define('PVE.tree.ResourceTree', {
 				tagNode = me.addChildSorted(parentNode, {
 					type: 'tag-folder',
 					id: `tag/${numberedTag}`,
-					text: numberedTag, // Ensure the folder name shows properly
+					text: numberedTag,
 					iconCls: 'fa fa-folder',
 					leaf: false,
 					groupbyid: numberedTag,
@@ -16078,11 +16083,11 @@ Ext.define('PVE.tree.ResourceTree', {
 			parentNode = tagNode;
 		});
 	
-		// Ensure VM is added to the lowest level it should be in
 		if (!parentNode.findChild('id', info.id)) {
 			return me.addChildSorted(parentNode, info);
 		}
 	},
+	
 	
 	
 	
