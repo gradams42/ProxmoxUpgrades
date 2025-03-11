@@ -16055,24 +16055,26 @@ Ext.define('PVE.tree.ResourceTree', {
 	
 		let parentNode = node;
 		
-		// Ensure the first tag always creates a parent folder
-		let firstTag = tags[0];
-		let firstTagNode = parentNode.findChild('groupbyid', firstTag);
-		
-		if (!firstTagNode) {
-			firstTagNode = me.addChildSorted(parentNode, {
+		// ✅ Process tags from right to left (reverse order)
+		tags.reverse();
+	
+		let primaryTag = tags[0];
+		let primaryTagNode = parentNode.findChild('groupbyid', primaryTag);
+	
+		if (!primaryTagNode) {
+			primaryTagNode = me.addChildSorted(parentNode, {
 				type: 'tag-folder',
-				id: `tag/${firstTag}`,
-				text: firstTag, // Ensures folder name appears correctly
+				id: `tag/${primaryTag}`,
+				text: primaryTag, // Ensures folder name appears correctly
 				iconCls: 'fa fa-folder',
 				leaf: false,
-				groupbyid: firstTag,
+				groupbyid: primaryTag,
 			});
 		}
-		
-		parentNode = firstTagNode;
 	
-		// Process additional tags as subfolders
+		parentNode = primaryTagNode;
+	
+		// ✅ Process additional tags as children in correct order
 		for (let i = 1; i < tags.length; i++) {
 			let tag = tags[i];
 	
@@ -16091,11 +16093,12 @@ Ext.define('PVE.tree.ResourceTree', {
 			parentNode = tagNode;
 		}
 	
-		// Ensure VM is placed in the deepest subfolder (not duplicated)
+		// ✅ Ensure VM is placed in the correct (deepest) folder
 		if (!parentNode.findChild('id', info.id)) {
 			return me.addChildSorted(parentNode, info);
 		}
 	},
+	
 	
 	
 
