@@ -16054,42 +16054,28 @@ Ext.define('PVE.tree.ResourceTree', {
 		}
 	
 		let parentNode = node;
-		let baseNumber = 10; // Start numbering hierarchy from 10
 	
-		// ✅ Force sorting of tags based on their numerical prefix
-		tags = tags.sort((a, b) => {
-			let numA = parseInt(a.match(/^\d+/)?.[0] || 0, 10);
-			let numB = parseInt(b.match(/^\d+/)?.[0] || 0, 10);
-			return numB - numA; // Ensure largest number comes first
-		});
-	
-		tags.forEach((tag, index) => {
-			let numberPrefix = baseNumber - index;
-			let numberedTag = `${numberPrefix}-${tag}`;
-	
-			let tagNode = parentNode.findChild('groupbyid', numberedTag);
+		for (let tag of tags) {
+			let tagNode = parentNode.findChild('groupbyid', tag);
 	
 			if (!tagNode) {
 				tagNode = me.addChildSorted(parentNode, {
 					type: 'tag-folder',
-					id: `tag/${numberedTag}`,
-					text: numberedTag,
+					id: `tag/${tag}`,
+					text: tag,  // No more numbering, just raw tag name
 					iconCls: 'fa fa-folder',
 					leaf: false,
-					groupbyid: numberedTag,
+					groupbyid: tag,
 				});
 			}
 	
 			parentNode = tagNode;
-		});
+		}
 	
 		if (!parentNode.findChild('id', info.id)) {
 			return me.addChildSorted(parentNode, info);
 		}
-	},
-	
-	
-	
+	},	
 	
 	
 
