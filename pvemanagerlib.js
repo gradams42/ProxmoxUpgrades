@@ -16054,50 +16054,49 @@ Ext.define('PVE.tree.ResourceTree', {
 		}
 	
 		let parentNode = node;
-		let firstTag = tags[0];
 		
-		// ✅ Step 1: Ensure the first tag belongs to an existing top-level group or is new
-		let existingFirstLevel = parentNode.childNodes.map(n => n.data.groupbyid);
-		if (!existingFirstLevel.includes(firstTag)) {
-			// If first tag is not in the existing first-level groups, create a new folder
-			parentNode = me.addChildSorted(parentNode, {
+		// Ensure the first tag always creates a parent folder
+		let firstTag = tags[0];
+		let firstTagNode = parentNode.findChild('groupbyid', firstTag);
+		
+		if (!firstTagNode) {
+			firstTagNode = me.addChildSorted(parentNode, {
 				type: 'tag-folder',
 				id: `tag/${firstTag}`,
-				text: firstTag,  
+				text: firstTag, // Ensures folder name appears correctly
 				iconCls: 'fa fa-folder',
 				leaf: false,
 				groupbyid: firstTag,
 			});
-		} else {
-			// Otherwise, find the matching existing group
-			parentNode = parentNode.findChild('groupbyid', firstTag);
 		}
+		
+		parentNode = firstTagNode;
 	
-		// ✅ Step 2: Ensure additional tags are valid subgroups (only one level deeper)
+		// Process additional tags as subfolders
 		for (let i = 1; i < tags.length; i++) {
 			let tag = tags[i];
 	
-			// Prevent invalid nesting: Next tag should be either new or inside current level
-			let existingSubFolders = parentNode.childNodes.map(n => n.data.groupbyid);
-			if (!existingSubFolders.includes(tag)) {
-				parentNode = me.addChildSorted(parentNode, {
+			let tagNode = parentNode.findChild('groupbyid', tag);
+			if (!tagNode) {
+				tagNode = me.addChildSorted(parentNode, {
 					type: 'tag-folder',
-					id: `tag/${firstTag}/${tag}`,
+					id: `tag/${tag}`,
 					text: tag,
 					iconCls: 'fa fa-folder',
 					leaf: false,
 					groupbyid: tag,
 				});
-			} else {
-				parentNode = parentNode.findChild('groupbyid', tag);
 			}
+	
+			parentNode = tagNode;
 		}
 	
-		// ✅ Step 3: Ensure VM is only added once at the correct path
+		// Ensure VM is placed in the deepest subfolder (not duplicated)
 		if (!parentNode.findChild('id', info.id)) {
 			return me.addChildSorted(parentNode, info);
 		}
 	},
+	
 	
 
 
