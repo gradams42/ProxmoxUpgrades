@@ -16049,34 +16049,51 @@ Ext.define('PVE.tree.ResourceTree', {
 		let me = this;
 		let tags = info.tags ? info.tags.split(';') : [];
 	
-		// 🛠️ If no tags exist, place the VM directly under the Datacenter
 		if (!tags.length) {
 			return me.addChildSorted(node, info);
 		}
 	
 		let parentNode = node;
+		let firstTag = tags[0];
+		
+		// ✅ Step 1: Ensure the first tag belongs to an existing top-level group or is new
+		let existingFirstLevel = parentNode.childNodes.map(n => n.data.groupbyid);
+		if (!existingFirstLevel.includes(firstTag)) {
+			// If first tag is not in the existing first-level groups, create a new folder
+			parentNode = me.addChildSorted(parentNode, {
+				type: 'tag-folder',
+				id: `tag/${firstTag}`,
+				text: firstTag,  
+				iconCls: 'fa fa-folder',
+				leaf: false,
+				groupbyid: firstTag,
+			});
+		} else {
+			// Otherwise, find the matching existing group
+			parentNode = parentNode.findChild('groupbyid', firstTag);
+		}
 	
-		for (let tag of tags) {
-			// Look for an existing folder with this tag
-			let tagNode = parentNode.findChild('groupbyid', tag);
+		// ✅ Step 2: Ensure additional tags are valid subgroups (only one level deeper)
+		for (let i = 1; i < tags.length; i++) {
+			let tag = tags[i];
 	
-			if (!tagNode) {
-				// ✅ Ensure folder has a name by assigning `text: tag`
-				tagNode = me.addChildSorted(parentNode, {
+			// Prevent invalid nesting: Next tag should be either new or inside current level
+			let existingSubFolders = parentNode.childNodes.map(n => n.data.groupbyid);
+			if (!existingSubFolders.includes(tag)) {
+				parentNode = me.addChildSorted(parentNode, {
 					type: 'tag-folder',
-					id: `tag/${tag}`,
-					text: tag, // ✅ Set the folder name correctly
+					id: `tag/${firstTag}/${tag}`,
+					text: tag,
 					iconCls: 'fa fa-folder',
 					leaf: false,
 					groupbyid: tag,
 				});
+			} else {
+				parentNode = parentNode.findChild('groupbyid', tag);
 			}
-	
-			// Move to the next level for subfolders
-			parentNode = tagNode;
 		}
 	
-		// 🛠️ Ensure VM is not duplicated inside multiple folders
+		// ✅ Step 3: Ensure VM is only added once at the correct path
 		if (!parentNode.findChild('id', info.id)) {
 			return me.addChildSorted(parentNode, info);
 		}
@@ -16154,134 +16171,122 @@ Ext.define('PVE.tree.ResourceTree', {
 
 
 	let updateTree = function() {
-	    store.suspendEvents();
-
-	    let rootnode = me.store.getRootNode();
-	    // remember selected node (and all parents)
-	    let sm = me.getSelectionModel();
-	    let lastsel = sm.getSelection()[0];
-	    let parents = [];
-	    let sorting_changed = me.saveSortingOptions();
-	    for (let node = lastsel; node; node = node.parentNode) {
-		parents.push(node);
-	    }
-
-	    let groups = me.viewFilter.groups || [];
-	    // explicitly check for node/template, as those are not always grouping attributes
-	    let attrMoveChecks = me.viewFilter.attrMoveChecks ?? {};
-
-	    // also check for name for when the tree is sorted by name
-	    let moveCheckAttrs = groups.concat(['node', 'template', 'name']);
-	    let filterFn = me.viewFilter.getFilterFn ? me.viewFilter.getFilterFn() : Ext.identityFn;
-
-	    let reselect = false; // for disappeared nodes
-	    let index = pdata.dataIndex;
-	    // remove vanished or moved items and update changed items in-place
-	    for (const [key, olditem] of Object.entries(index)) {
-		// getById() use find(), which is slow (ExtJS4 DP5)
-		let oldid = olditem.data.id;
-		let id = idMapFn(olditem.data.id);
-		let item = rstore.data.get(id);
-
-		let changed = sorting_changed, moved = sorting_changed;
-		if (item) {
-		    // test if any grouping attributes changed, catches migrated tree-nodes in server view too
-		    for (const attr of moveCheckAttrs) {
-			if (attrMoveChecks[attr]) {
-			    if (attrMoveChecks[attr](olditem, item)) {
-				moved = true;
-				break;
-			    }
-			} else if (item.data[attr] !== olditem.data[attr]) {
-			    moved = true;
-			    break;
+		store.suspendEvents();
+	
+		let rootnode = me.store.getRootNode();
+		let sm = me.getSelectionModel();
+		let lastsel = sm.getSelection()[0];
+	
+		let parents = [];
+		let sorting_changed = me.saveSortingOptions();
+		for (let node = lastsel; node; node = node.parentNode) {
+			parents.push(node);
+		}
+	
+		let groups = me.viewFilter.groups || [];
+		let attrMoveChecks = me.viewFilter.attrMoveChecks ?? {};
+		let moveCheckAttrs = groups.concat(['node', 'template', 'name']);
+		let filterFn = me.viewFilter.getFilterFn ? me.viewFilter.getFilterFn() : Ext.identityFn;
+	
+		let reselect = false;
+		let index = pdata.dataIndex;
+	
+		// ✅ Step 1: Remove vanished or moved items, clean empty folders
+		Object.entries(index).forEach(([key, olditem]) => {
+			let oldid = olditem.data.id;
+			let id = idMapFn(olditem.data.id);
+			let item = rstore.data.get(id);
+	
+			let changed = sorting_changed, moved = sorting_changed;
+	
+			if (item) {
+				// ✅ Step 1a: Check if any attributes changed
+				for (const attr of moveCheckAttrs) {
+					if (attrMoveChecks[attr] && attrMoveChecks[attr](olditem, item)) {
+						moved = true;
+						break;
+					} else if (item.data[attr] !== olditem.data[attr]) {
+						moved = true;
+						break;
+					}
+				}
+	
+				// ✅ Step 1b: Check for content updates (tags, status, etc.)
+				for (const field of changedFields) {
+					if (item.data[field] !== olditem.data[field]) {
+						changed = true;
+						break;
+					}
+				}
 			}
-		    }
-
-		    // tree item has been updated
-		    for (const field of changedFields) {
-			if (item.data[field] !== olditem.data[field]) {
-			    changed = true;
-			    break;
+	
+			// ✅ Step 1c: If VM moved or is missing, remove it from the tree
+			if ((!item || moved) && olditem.isLeaf()) {
+				delete index[key];
+				let parentNode = olditem.parentNode;
+				if (lastsel && olditem.data.id === lastsel.data.id) {
+					reselect = true;
+					sm.deselect(olditem);
+				}
+	
+				store.remove(olditem);
+				parentNode.removeChild(olditem, true);
+	
+				// ✅ Step 1d: If parent folder is empty, remove it as well
+				while (parentNode && parentNode.childNodes.length === 0 && parentNode.parentNode) {
+					let grandParent = parentNode.parentNode;
+					grandParent.removeChild(parentNode, true);
+					parentNode = grandParent;
+				}
 			}
-		    }
-		    // FIXME: also test filterfn()?
+		});
+	
+		// ✅ Step 2: Add new items (ensure correct parent tag structure)
+		let items = rstore.getData().items.flatMap(me.viewFilter.itemMap ?? Ext.identityFn);
+		items.forEach(item => {
+			let olditem = index[item.data.id];
+			if (olditem) {
+				return;
+			}
+			if (filterFn && !filterFn(item)) {
+				return;
+			}
+	
+			let info = Ext.apply({ leaf: true }, item.data);
+			let child = me.groupChild(rootnode, info, groups, 0);
+			if (child) {
+				index[item.data.id] = child;
+			}
+		});
+	
+		store.resumeEvents();
+		store.fireEvent('refresh', store);
+	
+		let foundChild = findNode(rootnode, lastsel?.data.id);
+	
+		// ✅ Step 3: Ensure the right node stays selected
+		if (lastsel && !foundChild) {
+			lastsel = rootnode;
+			for (const node of parents) {
+				if (rootnode.findChild('id', node.data.id, true)) {
+					lastsel = node;
+					break;
+				}
+			}
+			me.selectById(lastsel.data.id);
+		} else if (lastsel && reselect) {
+			me.selectById(lastsel.data.id);
 		}
-
-		if (changed) {
-		    olditem.beginEdit();
-		    let info = olditem.data;
-		    Ext.apply(info, item.data);
-		    if (info.id !== oldid) {
-			info.id = oldid;
-		    }
-		    me.setIconCls(info);
-		    me.setText(info);
-		    olditem.commit();
+	
+		// ✅ Step 4: Ensure UI refreshes correctly
+		if (!pdata.updateCount) {
+			rootnode.expand();
+			me.applyState(sp.get(stateid));
 		}
-		if ((!item || moved) && olditem.isLeaf()) {
-		    delete index[key];
-		    let parentNode = olditem.parentNode;
-		    // a selected item moved (migration) or disappeared (destroyed), so deselect that
-		    // node now and try to reselect the moved (or its parent) node later
-		    if (lastsel && olditem.data.id === lastsel.data.id) {
-			reselect = true;
-			sm.deselect(olditem);
-		    }
-		    // store events are suspended, so remove the item manually
-		    store.remove(olditem);
-		    parentNode.removeChild(olditem, true);
-		    if (parentNode.childNodes.length < 1 && parentNode.parentNode) {
-			let grandParent = parentNode.parentNode;
-			grandParent.removeChild(parentNode, true);
-		    }
-		}
-	    }
-
-	    let items = rstore.getData().items.flatMap(me.viewFilter.itemMap ?? Ext.identityFn);
-	    items.forEach(function(item) { // add new items
-		let olditem = index[item.data.id];
-		if (olditem) {
-		    return;
-		}
-		if (filterFn && !filterFn(item)) {
-		    return;
-		}
-		let info = Ext.apply({ leaf: true }, item.data);
-
-		let child = me.groupChild(rootnode, info, groups, 0);
-		if (child) {
-		    index[item.data.id] = child;
-		}
-	    });
-
-	    store.resumeEvents();
-	    store.fireEvent('refresh', store);
-
-	    let foundChild = findNode(rootnode, lastsel?.data.id);
-
-	    // select parent node if original selected node vanished
-	    if (lastsel && !foundChild) {
-		lastsel = rootnode;
-		for (const node of parents) {
-		    if (rootnode.findChild('id', node.data.id, true)) {
-			lastsel = node;
-			break;
-		    }
-		}
-		me.selectById(lastsel.data.id);
-	    } else if (lastsel && reselect) {
-		me.selectById(lastsel.data.id);
-	    }
-
-	    // on first tree load set the selection from the stateful provider
-	    if (!pdata.updateCount) {
-		rootnode.expand();
-		me.applyState(sp.get(stateid));
-	    }
-
-	    pdata.updateCount++;
+	
+		pdata.updateCount++;
 	};
+	
 
 	sp.on('statechange', (_sp, key, value) => {
 	    if (key === stateid) {
