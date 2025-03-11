@@ -92,7 +92,7 @@ Your **tag-based organization system** will now be **active**.
 
 ##  **Future Improvements**
  **Currently there are some bugs when using the Tag view, but this functionality allows for server view to be more manageable so I beleive it is worth it.**  
- 
+ **At the moment in version 1 you have to refresh after adding or removing tags in order to see an update. I think this is annoying and will be working to fix it.**
 
 ### **Credits**
 - **Developed by:** Gabriel Adams  
