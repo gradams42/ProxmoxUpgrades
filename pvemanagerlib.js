@@ -16054,46 +16054,31 @@ Ext.define('PVE.tree.ResourceTree', {
 		}
 	
 		let parentNode = node;
-		
-		// ✅ Process tags from right to left (reverse order)
-		tags.reverse();
+		let baseNumber = 10; // Start at 10 for top-level directories
 	
-		let primaryTag = tags[0];
-		let primaryTagNode = parentNode.findChild('groupbyid', primaryTag);
+		// Ensure tags are processed in the order they are assigned
+		tags.forEach((tag, index) => {
+			let numberPrefix = baseNumber - index; // Assign decreasing number
 	
-		if (!primaryTagNode) {
-			primaryTagNode = me.addChildSorted(parentNode, {
-				type: 'tag-folder',
-				id: `tag/${primaryTag}`,
-				text: primaryTag, // Ensures folder name appears correctly
-				iconCls: 'fa fa-folder',
-				leaf: false,
-				groupbyid: primaryTag,
-			});
-		}
+			let numberedTag = `${numberPrefix}-${tag}`; // Example: "10-vpn"
 	
-		parentNode = primaryTagNode;
+			let tagNode = parentNode.findChild('groupbyid', numberedTag);
 	
-		// ✅ Process additional tags as children in correct order
-		for (let i = 1; i < tags.length; i++) {
-			let tag = tags[i];
-	
-			let tagNode = parentNode.findChild('groupbyid', tag);
 			if (!tagNode) {
 				tagNode = me.addChildSorted(parentNode, {
 					type: 'tag-folder',
-					id: `tag/${tag}`,
-					text: tag,
+					id: `tag/${numberedTag}`,
+					text: numberedTag, // Ensure the folder name shows properly
 					iconCls: 'fa fa-folder',
 					leaf: false,
-					groupbyid: tag,
+					groupbyid: numberedTag,
 				});
 			}
 	
 			parentNode = tagNode;
-		}
+		});
 	
-		// ✅ Ensure VM is placed in the correct (deepest) folder
+		// Ensure VM is added to the lowest level it should be in
 		if (!parentNode.findChild('id', info.id)) {
 			return me.addChildSorted(parentNode, info);
 		}
@@ -16101,9 +16086,10 @@ Ext.define('PVE.tree.ResourceTree', {
 	
 	
 	
+	
 
 
-     saveSortingOptions: function() {
+    saveSortingOptions: function() {
 	let me = this;
 	let changed = false;
 	for (const key of ['sort-field', 'group-templates', 'group-guest-types']) {
