@@ -12,7 +12,7 @@ Instead of a flat list of resources, this feature dynamically organizes VMs into
 This helps administrators efficiently manage **large-scale Proxmox environments** by allowing for **hierarchical categorization of resources**.
 
 ---
-[!Demonstration](Organized_Node.png)
+![Demonstration](Organized_Node.png)
 
 ## **Key Features**  
 
