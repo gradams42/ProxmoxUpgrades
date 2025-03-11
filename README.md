@@ -83,6 +83,9 @@ For the changes to take effect, restart the **Proxmox web interface and daemon**
 systemctl restart pveproxy
 systemctl restart pvedaemon
 ```
+### **Step 4: Refresh your page using ctrl + shit + R to reload any cached frontend**
+
+
 Your **tag-based organization system** will now be **active**.
 
 
