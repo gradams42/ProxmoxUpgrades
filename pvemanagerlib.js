@@ -16170,12 +16170,20 @@ Ext.define('PVE.tree.ResourceTree', {
 	};
 
 
-	let updateTree = function() {
+	let updateTree = function () {
 		store.suspendEvents();
 	
 		let rootnode = me.store.getRootNode();
 		let sm = me.getSelectionModel();
 		let lastsel = sm.getSelection()[0];
+	
+		// ✅ Store expanded nodes before refresh
+		let expandedNodes = new Set();
+		rootnode.cascadeBy(node => {
+			if (node.isExpanded()) {
+				expandedNodes.add(node.getId()); // Store node ID
+			}
+		});
 	
 		let parents = [];
 		let sorting_changed = me.saveSortingOptions();
@@ -16191,7 +16199,7 @@ Ext.define('PVE.tree.ResourceTree', {
 		let reselect = false;
 		let index = pdata.dataIndex;
 	
-		// ✅ Step 1: Remove vanished or moved items, clean empty folders
+		// ✅ Step 1: Remove vanished/moved VMs and clean empty folders
 		Object.entries(index).forEach(([key, olditem]) => {
 			let oldid = olditem.data.id;
 			let id = idMapFn(olditem.data.id);
@@ -16200,7 +16208,7 @@ Ext.define('PVE.tree.ResourceTree', {
 			let changed = sorting_changed, moved = sorting_changed;
 	
 			if (item) {
-				// ✅ Step 1a: Check if any attributes changed
+				// ✅ Check if any attributes changed (moved to different folder)
 				for (const attr of moveCheckAttrs) {
 					if (attrMoveChecks[attr] && attrMoveChecks[attr](olditem, item)) {
 						moved = true;
@@ -16211,7 +16219,7 @@ Ext.define('PVE.tree.ResourceTree', {
 					}
 				}
 	
-				// ✅ Step 1b: Check for content updates (tags, status, etc.)
+				// ✅ Check for content updates (tags, status, etc.)
 				for (const field of changedFields) {
 					if (item.data[field] !== olditem.data[field]) {
 						changed = true;
@@ -16220,7 +16228,7 @@ Ext.define('PVE.tree.ResourceTree', {
 				}
 			}
 	
-			// ✅ Step 1c: If VM moved or is missing, remove it from the tree
+			// ✅ If VM moved or is missing, remove from tree
 			if ((!item || moved) && olditem.isLeaf()) {
 				delete index[key];
 				let parentNode = olditem.parentNode;
@@ -16232,7 +16240,7 @@ Ext.define('PVE.tree.ResourceTree', {
 				store.remove(olditem);
 				parentNode.removeChild(olditem, true);
 	
-				// ✅ Step 1d: If parent folder is empty, remove it as well
+				// ✅ Remove empty parent folders
 				while (parentNode && parentNode.childNodes.length === 0 && parentNode.parentNode) {
 					let grandParent = parentNode.parentNode;
 					grandParent.removeChild(parentNode, true);
@@ -16241,7 +16249,7 @@ Ext.define('PVE.tree.ResourceTree', {
 			}
 		});
 	
-		// ✅ Step 2: Add new items (ensure correct parent tag structure)
+		// ✅ Step 2: Add new VMs ensuring correct tag hierarchy
 		let items = rstore.getData().items.flatMap(me.viewFilter.itemMap ?? Ext.identityFn);
 		items.forEach(item => {
 			let olditem = index[item.data.id];
@@ -16262,9 +16270,16 @@ Ext.define('PVE.tree.ResourceTree', {
 		store.resumeEvents();
 		store.fireEvent('refresh', store);
 	
+		// ✅ Step 3: Restore expanded folders after refresh
+		rootnode.cascadeBy(node => {
+			if (expandedNodes.has(node.getId())) {
+				node.expand();
+			}
+		});
+	
 		let foundChild = findNode(rootnode, lastsel?.data.id);
 	
-		// ✅ Step 3: Ensure the right node stays selected
+		// ✅ Step 4: Ensure correct selection after update
 		if (lastsel && !foundChild) {
 			lastsel = rootnode;
 			for (const node of parents) {
@@ -16278,7 +16293,7 @@ Ext.define('PVE.tree.ResourceTree', {
 			me.selectById(lastsel.data.id);
 		}
 	
-		// ✅ Step 4: Ensure UI refreshes correctly
+		// ✅ Step 5: Ensure UI refreshes correctly
 		if (!pdata.updateCount) {
 			rootnode.expand();
 			me.applyState(sp.get(stateid));
@@ -16286,6 +16301,7 @@ Ext.define('PVE.tree.ResourceTree', {
 	
 		pdata.updateCount++;
 	};
+	
 	
 
 	sp.on('statechange', (_sp, key, value) => {
