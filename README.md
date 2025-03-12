@@ -12,14 +12,17 @@ Instead of a flat list of resources, this feature dynamically organizes VMs into
 This helps administrators efficiently manage **large-scale Proxmox environments** by allowing for **hierarchical categorization of resources**.
 
 ---
+![Demonstration](Organized_Node.png)
 
 ## **Key Features**  
 
 ### **Tag-Based Folder Organization**  
 - The **first tag** assigned to a VM/LXC **determines its parent folder**.  
 - Additional tags create **subdirectories** under that parent.  
-- Has remediations for accidental incorrect ordering (e.g., ensures `Production -> Database` instead of `Database -> Production`).  
+- Has remediations for accidental incorrect ordering (e.g., ensures `Production -> Database` instead of `Database -> Production`).
+   
 - Users should currently use an **A), B), C)** naming scheme when creating subdirectory tags to prevent improper sorting (e.g., `A-Production`, `B-Database`).  
+For example, when I make 'Production' and 'Test' directories that are separate, I will make A-Production and A-Test tags. Then, lets say I want a database and a WWW tag under both. The second tags I add to the VM's in those folders will be b-database, and b-www. This will ensure that VM's inside of say Production --> database are in the subfolder database which is under production. 
 
 ### **Real-Time Updates (No Full Refresh Needed)**  
 - The tree dynamically **refreshes when tags change**, eliminating the need for a **full page reload**.  
@@ -61,17 +64,19 @@ This ensures that you can **restore the original file** if needed.
 ---
 
 ### **Step 2: Replace `pvemanagerlib.js`**  
-Download the updated **`pvemanagerlib.js`** from your source and **replace the existing file**:  
+Clone this repository with:
+```sh
+git clone https://github.com/gradams42/ProxmoxUpgrades.git'
+cd ProxmoxUpgrades
+```
 
 1. **Upload the new file** to your Proxmox VE server:  
    ```sh
    scp pvemanagerlib.js root@your-proxmox-ip:/usr/share/pve-manager/js/
    ```
-2. **Move it into place (overwrite the old file)**:  
-   ```sh
-   mv /usr/share/pve-manager/js/pvemanagerlib.js /usr/share/pve-manager/js/pvemanagerlib.js.new
+
    ```
-3. **Ensure correct permissions**:  
+2. **Ensure correct permissions**:  
    ```sh
    chmod 644 /usr/share/pve-manager/js/pvemanagerlib.js
    ```
