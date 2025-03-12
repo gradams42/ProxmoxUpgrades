@@ -15837,6 +15837,9 @@ Ext.define('PVE.panel.TagConfig', {
     //onlineHelp: 'gui_tags', // TODO: use this one once available
     onlineHelp: 'chapter_gui',
 });
+
+
+
 /*
  * Left Treepanel, containing all the resources we manage in this datacenter: server nodes, server storages, VMs and Containers
  */
@@ -16183,7 +16186,7 @@ Ext.define('PVE.tree.ResourceTree', {
 
         let rootnode = me.store.getRootNode();
         let sm = me.getSelectionModel();
-        let lastsel = sm.getSelection()[0];
+        let lastsel = sm.getSelection()[0] || rootnode;
 
         // Store expanded nodes before refreshing the tree
         let expandedNodes = new Set();
@@ -16281,7 +16284,7 @@ Ext.define('PVE.tree.ResourceTree', {
             }
         });
 
-        let foundChild = findNode(rootnode, lastsel?.data.id);
+        let foundChild = findNode(rootnode, lastsel?.data.id) || null;
 
         // Step 4: Ensure correct selection after update
         if (lastsel && !foundChild) {
@@ -16450,6 +16453,8 @@ Ext.define('PVE.tree.ResourceTree', {
     },
 
 });
+
+
 Ext.define('PVE.guest.SnapshotTree', {
     extend: 'Ext.tree.Panel',
     xtype: 'pveGuestSnapshotTree',
