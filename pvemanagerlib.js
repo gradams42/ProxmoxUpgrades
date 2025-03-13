@@ -3558,6 +3558,8 @@ Ext.define('PVE.Utils', {
     },
 
 });
+
+
 Ext.define('PVE.UIOptions', {
     singleton: true,
 
@@ -3584,7 +3586,10 @@ Ext.define('PVE.UIOptions', {
     tagList: [],
 
     updateTagList: function(tags) {
-	PVE.UIOptions.tagList = [...new Set([...tags])].sort();
+	PVE.UIOptions.tagList = [...new Set([...tags])];
+
+	//Since I am diabling the sorting for the tags, I am going to return false to this
+	return false
     },
 
     parseTagOverrides: function(overrides) {
